@@ -1,0 +1,735 @@
+//这是app目录下的app/build.gradle
+apply plugin: 'com.android.application'
+// 暂时注释掉BlackObfuscator插件，避免版本兼容性问题
+apply plugin: 'top.niunaijun.blackobfuscator'
+android {
+    compileSdkVersion 31
+    buildToolsVersion "30.0.3"
+    namespace "load.tencent.lib"
+
+    // 启用 prefab 支持（用于原生库依赖管理）
+    buildFeatures {
+        buildConfig true
+        prefab true
+    }
+
+    // 添加签名配置
+    signingConfigs {
+        debug {
+            storeFile file("debug.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+        release {
+            // 暂时使用debug签名，实际发布时应该使用正式签名
+            storeFile file("debug.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+    }
+
+    defaultConfig {
+        applicationId "load.tencent.lib"
+        minSdkVersion 21
+        targetSdkVersion 31
+        versionCode 1
+        versionName "1.0"
+
+        // 添加NDK配置 - 支持ARM和x86架构
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
+        }
+
+        // 添加CMake配置 - 支持ARM和x86架构
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++14"
+                abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
+            }
+        }
+        
+        // 添加BuildConfig字段
+        buildConfigField "boolean", "ENABLE_LOGGING", "true"
+        buildConfigField "String", "LOG_TAG", "\"996CQ\""
+    }
+
+    // 添加CMake构建配置
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+    
+    // 配置源码集，Release版本排除LogUtils.java和AppStrings.java
+    sourceSets {
+        main {
+            java {
+                srcDirs = ['src/main/java']
+            }
+        }
+        debug {
+            java {
+                srcDirs = ['src/generated/java', 'src/main/java']  // 优先使用generated目录
+                // Debug版本也排除原始文件，使用加密版本
+                // Release版本排除原始文件，使用加密版本
+                exclude '**/LogUtils.java'
+                exclude '**/AppStrings.java'
+            }
+        }
+        release {
+            java {
+                srcDirs = ['src/generated/java', 'src/main/java']  // 优先使用generated目录
+                // Release版本排除原始文件，使用加密版本
+                exclude '**/LogUtils.java'
+                exclude '**/AppStrings.java'
+            }
+        }
+    }
+    
+    buildTypes {
+        debug {
+            minifyEnabled true // 临时禁用代码混淆以便调试
+            shrinkResources true // 禁用资源压缩
+            //proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            
+            // Debug版本启用日志
+            buildConfigField "boolean", "ENABLE_LOGGING", "true"
+            buildConfigField "String", "LOG_TAG", "\"996CQ_DEBUG\""
+            // 启用更激进的优化
+            zipAlignEnabled false
+            
+            // 添加debug后缀
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            
+            // 使用debug签名
+            signingConfig signingConfigs.debug
+            
+            // NDK配置 - Debug版本 - 支持ARM和x86架构
+            ndk {
+                abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
+                debugSymbolLevel 'FULL'  // 保留调试符号
+            }
+            
+            externalNativeBuild {
+                cmake {
+                    arguments "-DCMAKE_BUILD_TYPE=Debug"
+                    cppFlags "-O0 -g -Wall -Wextra"
+                    abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
+                }
+            }
+        }
+        release {
+            minifyEnabled true // 启用代码混淆
+            shrinkResources true // 启用资源压缩
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            
+            // Release版本日志控制 - 检查ENABLE_RELEASE_LOGS参数
+            def enableReleaseLogs = project.hasProperty('ENABLE_RELEASE_LOGS') ? 
+                project.property('ENABLE_RELEASE_LOGS').toString().toUpperCase() != 'OFF' : false
+            
+            if (enableReleaseLogs) {
+                buildConfigField "boolean", "ENABLE_LOGGING", "true"
+                buildConfigField "String", "LOG_TAG", "\"996CQ_RELEASE\""
+            } else {
+                buildConfigField "boolean", "ENABLE_LOGGING", "false"
+                buildConfigField "String", "LOG_TAG", "\"RELEASE\""
+            }
+            
+            // 启用更激进的优化
+            zipAlignEnabled true
+            
+            // 使用release签名
+            signingConfig signingConfigs.release
+            
+            // NDK Release配置 - 启用LLVM混淆
+            externalNativeBuild {
+                cmake {
+                    arguments "-DCMAKE_BUILD_TYPE=Release"
+                    
+                    // 传递ENABLE_RELEASE_LOGS参数给CMake
+                    if (enableReleaseLogs) {
+                        arguments "-DENABLE_RELEASE_LOGS=ON"
+                        cppFlags "-O3 -DNDEBUG -fvisibility=hidden -flto -DRELEASE_MODE=1"
+                    } else {
+                        arguments "-DENABLE_RELEASE_LOGS=OFF"
+                        cppFlags "-O3 -DNDEBUG -fvisibility=hidden -flto"
+                    }
+                    
+                    // 启用LLVM混淆的编译标志
+                    arguments "-DANDROID_TOOLCHAIN=clang"
+                    arguments "-DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang"
+                    abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
+                }
+            }
+            
+            // NDK配置 - Release版本 - 支持ARM和x86架构
+            ndk {
+                abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
+                debugSymbolLevel 'NONE'  // 移除调试符号
+            }
+            
+            externalNativeBuild {
+                cmake {
+                    arguments "-DCMAKE_BUILD_TYPE=Release"
+                }
+            }
+        }
+    }
+
+    // 编译选项
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    
+    // 启用R8的完整模式
+    buildFeatures {
+        buildConfig true
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    // 替换为对应的AndroidX依赖
+    implementation 'androidx.appcompat:appcompat:1.3.0'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.8.1'
+    // 添加zip4j库用于密码保护的zip文件操作
+    implementation 'net.lingala.zip4j:zip4j:2.11.5'
+    implementation 'androidx.core:core:1.8.0'
+    
+    // 使用 And64InlineHook 替代 ByteHook
+}
+// 加入混淆配置
+android.applicationVariants.all { variant ->
+    if (variant.name.toLowerCase().contains('debug')) {
+        // Debug版本禁用BlackObfuscator
+        variant.ext.blackObfuscatorEnabled = false
+    } else if (variant.name.toLowerCase().contains('release')) {
+        // Release版本启用BlackObfuscator
+        variant.ext.blackObfuscatorEnabled = true
+    }
+}
+
+BlackObfuscator {
+    // 动态控制是否启用
+    enabled project.gradle.startParameter.taskNames.any { 
+        it.toLowerCase().contains('release') 
+    }
+    // 混淆深度
+    depth 4  // 降低混淆深度，减少复杂度
+    // 需要混淆的包或者类(匹配前面一段)
+    obfClass = ["load.tencent.lib"]
+    // blackClass中的包或者类不会进行混淆(匹配前面一段)
+    blackClass = [
+        "load.tencent.lib.Pic"
+    ]
+}
+
+// ==================== 字符串加密任务配置 ====================
+
+// 自定义 installReleaseApp 任务
+task installReleaseApp {
+    description '构建并安装Release版本到所有设备'
+    group 'install'
+    
+    // 依赖于assembleRelease任务
+    dependsOn 'assembleRelease'
+    
+    doFirst {
+        println "=== 开始安装Release版本到所有设备 ==="
+        
+        // 检查设备连接
+        def adbPath = android.getAdbExe()
+        def devicesOutput = new ByteArrayOutputStream()
+        def devicesResult = exec {
+            commandLine adbPath, 'devices'
+            standardOutput = devicesOutput
+            errorOutput = new ByteArrayOutputStream()
+            ignoreExitValue = true
+        }
+        
+        if (devicesResult.exitValue != 0) {
+            throw new GradleException("ADB命令执行失败")
+        }
+        
+        def devicesText = devicesOutput.toString()
+        def deviceLines = devicesText.split('\n').findAll { 
+            it.contains('\tdevice') && !it.contains('offline') 
+        }
+        
+        if (deviceLines.isEmpty()) {
+            throw new GradleException("未检测到已连接的设备。请确保设备已连接并启用USB调试。")
+        }
+        
+        println "检测到 ${deviceLines.size()} 个设备:"
+        deviceLines.each { line ->
+            def deviceId = line.split('\t')[0]
+            println "  - 设备ID: ${deviceId}"
+        }
+    }
+    
+    doLast {
+        def applicationId = android.defaultConfig.applicationId
+        def apkPath = "${project.buildDir}/outputs/apk/release/app-release.apk"
+        def adbPath = android.getAdbExe()
+        
+        // 检查APK文件是否存在
+        if (!file(apkPath).exists()) {
+            // 如果已签名APK不存在，尝试查找未签名APK
+            def unsignedApkPath = "${project.buildDir}/outputs/apk/release/app-release-unsigned.apk"
+            if (file(unsignedApkPath).exists()) {
+                apkPath = unsignedApkPath
+            } else {
+                throw new GradleException("Release APK文件不存在: ${apkPath}")
+            }
+        }
+        
+        println "APK文件路径: ${apkPath}"
+        println "应用包名: ${applicationId}"
+        
+        // 获取所有连接的设备
+        def devicesOutput = new ByteArrayOutputStream()
+        exec {
+            commandLine adbPath, 'devices'
+            standardOutput = devicesOutput
+            errorOutput = new ByteArrayOutputStream()
+            ignoreExitValue = true
+        }
+        
+        def devicesText = devicesOutput.toString()
+        def deviceLines = devicesText.split('\n').findAll { 
+            it.contains('\tdevice') && !it.contains('offline') 
+        }
+        
+        def deviceIds = deviceLines.collect { line ->
+            line.split('\t')[0]
+        }
+        
+        println "\n=== 开始在所有设备上安装 ==="
+        
+        def successCount = 0
+        def failureCount = 0
+        def installResults = [:]
+        
+        // 遍历所有设备进行安装
+        deviceIds.each { deviceId ->
+            println "\n--- 正在安装到设备: ${deviceId} ---"
+            
+            try {
+                // 检查设备上是否已安装应用
+                def checkOutput = new ByteArrayOutputStream()
+                def checkResult = exec {
+                    commandLine adbPath, '-s', deviceId, 'shell', 'pm', 'list', 'packages', applicationId
+                    standardOutput = checkOutput
+                    errorOutput = new ByteArrayOutputStream()
+                    ignoreExitValue = true
+                }
+                
+                def isInstalled = checkOutput.toString().contains("package:${applicationId}")
+                
+                if (isInstalled) {
+                    println "设备 ${deviceId} 上已安装应用 ${applicationId}"
+                    
+                    // 获取已安装应用的版本信息
+                    def versionOutput = new ByteArrayOutputStream()
+                    def versionResult = exec {
+                        commandLine adbPath, '-s', deviceId, 'shell', 'dumpsys', 'package', applicationId
+                        standardOutput = versionOutput
+                        errorOutput = new ByteArrayOutputStream()
+                        ignoreExitValue = true
+                    }
+                    
+                    def versionText = versionOutput.toString()
+                    def versionMatch = versionText =~ /versionName=([^\s]+)/
+                    if (versionMatch.find()) {
+                        def installedVersion = versionMatch.group(1)
+                        def currentVersion = android.defaultConfig.versionName
+                        println "已安装版本: ${installedVersion}"
+                        println "当前版本: ${currentVersion}"
+                        
+                        if (installedVersion == currentVersion) {
+                            println "版本相同，将覆盖安装"
+                        } else {
+                            println "版本不同，将覆盖安装"
+                        }
+                    }
+                } else {
+                    println "设备 ${deviceId} 上未安装应用，将全新安装"
+                }
+                
+                // 直接安装新版本（使用-r参数允许覆盖安装）
+                println "正在安装到设备 ${deviceId}..."
+                def installErrorOutput = new ByteArrayOutputStream()
+                def installResult = exec {
+                    commandLine adbPath, '-s', deviceId, 'install', '-r', apkPath  // -r 参数允许覆盖安装
+                    standardOutput = new ByteArrayOutputStream()
+                    errorOutput = installErrorOutput
+                    ignoreExitValue = true
+                }
+                
+                if (installResult.exitValue == 0) {
+                    println "✓ 设备 ${deviceId} 安装成功！"
+                    successCount++
+                    installResults[deviceId] = "成功"
+                    
+                    // 获取安装后的应用信息
+                    def infoOutput = new ByteArrayOutputStream()
+                    def infoResult = exec {
+                        commandLine adbPath, '-s', deviceId, 'shell', 'dumpsys', 'package', applicationId
+                        standardOutput = infoOutput
+                        errorOutput = new ByteArrayOutputStream()
+                        ignoreExitValue = true
+                    }
+                    
+                    def infoText = infoOutput.toString()
+                    def versionMatch = infoText =~ /versionName=([^\s]+)/
+                    def versionCodeMatch = infoText =~ /versionCode=([^\s]+)/
+                    
+                    if (versionMatch.find() && versionCodeMatch.find()) {
+                        println "已安装应用信息:"
+                        println "  - 包名: ${applicationId}"
+                        println "  - 版本名: ${versionMatch.group(1)}"
+                        println "  - 版本号: ${versionCodeMatch.group(1)}"
+                    }
+                    
+                } else {
+                    def errorText = installErrorOutput.toString()
+                    println "✗ 设备 ${deviceId} 安装失败："
+                    println errorText
+                    failureCount++
+                    installResults[deviceId] = "失败: ${errorText}"
+                }
+                
+            } catch (Exception e) {
+                println "✗ 设备 ${deviceId} 安装异常: ${e.message}"
+                failureCount++
+                installResults[deviceId] = "异常: ${e.message}"
+            }
+        }
+        
+        // 显示安装总结
+        println "\n=== 安装总结 ==="
+        println "总设备数: ${deviceIds.size()}"
+        println "安装成功: ${successCount}"
+        println "安装失败: ${failureCount}"
+        
+        println "\n详细结果:"
+        installResults.each { deviceId, result ->
+            println "  - ${deviceId}: ${result}"
+        }
+        
+        if (failureCount > 0) {
+            println "\n⚠ 部分设备安装失败，请检查具体错误信息"
+        } else {
+            println "\n✓ 所有设备安装成功！"
+        }
+    }
+}
+
+// 添加 installReleaseWithLogs 任务，安装后查看日志
+task installReleaseWithLogs {
+    description '构建并安装Release版本，然后查看应用日志'
+    group 'install'
+    
+    dependsOn 'installReleaseApp'
+    
+    doLast {
+        def applicationId = android.defaultConfig.applicationId
+        def adbPath = android.getAdbExe()
+        
+        println "=== 开始查看应用日志 ==="
+        println "应用包名: ${applicationId}"
+        println "按 Ctrl+C 停止查看日志"
+        
+        // 清除旧日志
+        exec {
+            commandLine adbPath, 'logcat', '-c'
+            ignoreExitValue = true
+        }
+        
+        // 查看应用日志
+        exec {
+            commandLine adbPath, 'logcat', '-s', 'System.out', '-s', '996CQ', '-s', 'RELEASE'
+            standardOutput = System.out
+            errorOutput = System.err
+        }
+    }
+}
+
+// 添加 uninstallReleaseAndClean 任务
+task uninstallReleaseAndClean {
+    description '卸载Release版本并清理构建缓存'
+    group 'install'
+    
+    doLast {
+        def applicationId = android.defaultConfig.applicationId
+        def adbPath = android.getAdbExe()
+        
+        println "=== 开始卸载Release版本 ==="
+        
+        // 卸载应用
+        def uninstallResult = exec {
+            commandLine adbPath, 'uninstall', applicationId
+            standardOutput = new ByteArrayOutputStream()
+            errorOutput = new ByteArrayOutputStream()
+            ignoreExitValue = true
+        }
+        
+        if (uninstallResult.exitValue == 0) {
+            println "✓ 应用卸载成功"
+        } else {
+            println "⚠ 应用卸载失败或应用未安装"
+        }
+        
+        // 清理构建缓存
+        println "正在清理构建缓存..."
+        delete project.buildDir
+        delete 'src/main/cpp/app_strings.h'
+        delete 'src/main/cpp/app_strings.cpp'
+        
+        println "✓ 构建缓存清理完成"
+    }
+}
+
+// 添加设备信息查看任务
+task deviceInfo {
+    description '查看连接设备的详细信息'
+    group 'install'
+    
+    doLast {
+        def adbPath = android.getAdbExe()
+        
+        println "=== 设备信息 ==="
+        
+        // 获取设备列表
+        def devicesOutput = new ByteArrayOutputStream()
+        def devicesResult = exec {
+            commandLine adbPath, 'devices', '-l'
+            standardOutput = devicesOutput
+            errorOutput = new ByteArrayOutputStream()
+            ignoreExitValue = true
+        }
+        
+        if (devicesResult.exitValue == 0) {
+            println "连接的设备:"
+            println devicesOutput.toString()
+        }
+        
+        // 获取设备属性
+        def propsOutput = new ByteArrayOutputStream()
+        def propsResult = exec {
+            commandLine adbPath, 'shell', 'getprop'
+            standardOutput = propsOutput
+            errorOutput = new ByteArrayOutputStream()
+            ignoreExitValue = true
+        }
+        
+        if (propsResult.exitValue == 0) {
+            def props = propsOutput.toString()
+            def importantProps = [
+                'ro.build.version.release': '系统版本',
+                'ro.build.version.sdk': 'SDK版本',
+                'ro.product.model': '设备型号',
+                'ro.product.brand': '设备品牌',
+                'ro.product.manufacturer': '制造商',
+                'ro.build.type': '构建类型',
+                'ro.debuggable': '可调试',
+                'ro.product.cpu.abi': 'CPU架构'
+            ]
+            
+            println "\n设备属性:"
+            importantProps.each { prop, desc ->
+                def match = props =~ /\[${prop}\]: \[([^\]]+)\]/
+                if (match.find()) {
+                    println "  ${desc}: ${match.group(1)}"
+                }
+            }
+        }
+    }
+}
+
+// 头文件加密任务
+task encryptHeaderFiles {
+    description '加密C++头文件中的字符串常量'
+    def stringsFile = file('src/main/cpp/strings.txt')
+    def plainHeader = file('src/main/cpp/app_strings.h')
+    def encryptedHeader = file('src/main/cpp/app_strings_encrypted.h')
+    def encryptScript = new File(project.rootDir, 'buildSrc/src/main/python/encrypt_header.py')
+
+    inputs.file stringsFile
+    inputs.file encryptScript
+    outputs.files plainHeader, encryptedHeader
+
+    doLast {
+        def pythonCmd = 'C:/Python/Python311/python.exe'
+        if (!(new File(pythonCmd).exists())) {
+            throw new GradleException("未找到Python解释器: ${pythonCmd}")
+        }
+        def outputHeader = plainHeader // 统一用app_strings.h
+        if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') }) {
+            // Release 生成加密内容
+            exec {
+                commandLine pythonCmd, encryptScript.absolutePath, '--strings', stringsFile.absolutePath, '--output', outputHeader.absolutePath, '--mode', 'release'
+                environment 'PYTHONIOENCODING', 'utf-8'
+                standardOutput = System.out
+                errorOutput = System.err
+            }
+        } else {
+            // Debug 生成明文内容
+            exec {
+                commandLine pythonCmd, encryptScript.absolutePath, '--strings', stringsFile.absolutePath, '--output', outputHeader.absolutePath, '--mode', 'debug'
+                environment 'PYTHONIOENCODING', 'utf-8'
+                standardOutput = System.out
+                errorOutput = System.err
+            }
+        }
+        println "头文件生成完成: ${outputHeader}"
+    }
+}
+
+// 确保头文件加密任务在C++编译前执行
+preBuild.dependsOn encryptHeaderFiles
+
+// 清理加密头文件任务
+task cleanEncryptedHeaders(type: Delete) {
+    delete 'src/main/cpp/app_strings_encrypted.h'
+}
+
+// 将清理任务添加到clean任务中
+clean.dependsOn cleanEncryptedHeaders
+
+// 为Release构建类型添加头文件加密依赖
+android.applicationVariants.all { variant ->
+    if (variant.buildType.name == 'release') {
+        // 确保在编译C++代码之前执行头文件加密
+        variant.externalNativeBuildTasks.each { nativeTask ->
+            nativeTask.dependsOn encryptHeaderFiles
+        }
+        
+        // 添加到assembleRelease任务的依赖中
+        variant.assembleProvider.get().dependsOn encryptHeaderFiles
+        
+        println "为Release构建 ${variant.name} 添加了头文件加密依赖"
+    }
+}
+
+// 测试代码混淆功能
+task testObfuscation(type: Exec, group: 'obfuscation', description: '测试代码混淆工具') {
+    doFirst {
+        println "开始测试代码混淆功能..."
+        
+        def pythonScript = file("${rootDir}/buildSrc/src/main/python/code_obfuscator.py")
+        def inputDir = file("${projectDir}/src/main/cpp")
+        def outputDir = file("${buildDir}/test_obfuscated")
+        
+        // 检查Python脚本是否存在
+        if (!pythonScript.exists()) {
+            throw new GradleException("混淆脚本不存在: ${pythonScript}")
+        }
+        
+        // 清理输出目录
+        if (outputDir.exists()) {
+            outputDir.deleteDir()
+        }
+        outputDir.mkdirs()
+        
+        println "输入目录: ${inputDir}"
+        println "输出目录: ${outputDir}"
+        println "混淆脚本: ${pythonScript}"
+    }
+    
+    // 查找Python可执行文件
+    def pythonCmd = System.getProperty('os.name').toLowerCase().contains('windows') ? 'python' : 'python3'
+    
+    commandLine pythonCmd, 
+                "${rootDir}/buildSrc/src/main/python/code_obfuscator.py",
+                "${projectDir}/src/main/cpp",
+                "${buildDir}/test_obfuscated",
+                "--seed", "12345",
+                "--no-strings"
+    
+    doLast {
+        println "代码混淆测试完成！"
+        println "混淆后的文件位于: ${buildDir}/test_obfuscated"
+        
+        // 检查混淆结果
+        def obfuscatedDir = file("${buildDir}/test_obfuscated")
+        if (obfuscatedDir.exists()) {
+            def cppFiles = fileTree(obfuscatedDir).include('**/*.cpp', '**/*.c')
+            println "成功混淆 ${cppFiles.files.size()} 个C++文件"
+            
+            cppFiles.each { file ->
+                println "  - ${file.name}"
+            }
+        } else {
+            println "警告: 混淆输出目录不存在"
+        }
+    }
+}
+
+// 编译混淆版本
+task assembleObfuscatedRelease(type: Exec, group: 'obfuscation', description: '编译混淆版本的Release APK') {
+    dependsOn 'testObfuscation'
+    
+    doFirst {
+        println "开始编译混淆版本..."
+    }
+    
+    commandLine './gradlew', 'assembleRelease'
+    
+    doLast {
+        println "混淆版本编译完成！"
+        
+        // 显示APK信息
+        def apkFile = file("${buildDir}/outputs/apk/release/app-release.apk")
+        if (apkFile.exists()) {
+            def apkSize = apkFile.length()
+            println "APK文件: ${apkFile}"
+            println "APK大小: ${String.format('%.2f', apkSize / 1024.0 / 1024.0)} MB"
+        }
+    }
+}
+
+// 分析混淆效果
+task analyzeObfuscation(type: Exec, group: 'obfuscation', description: '分析混淆效果') {
+    dependsOn 'assembleObfuscatedRelease'
+    
+    doFirst {
+        println "开始分析混淆效果..."
+    }
+    
+    // 使用readelf分析SO文件
+    def soFile = file("${buildDir}/intermediates/merged_native_libs/release/out/lib/arm64-v8a/lib996cq_native.so")
+    
+    if (soFile.exists()) {
+        commandLine 'readelf', '-s', soFile.absolutePath
+    } else {
+        println "SO文件不存在: ${soFile}"
+        commandLine 'echo', '未找到SO文件'
+    }
+    
+    doLast {
+        println "混淆效果分析完成！"
+        
+        if (soFile.exists()) {
+            def soSize = soFile.length()
+            println "SO文件: ${soFile}"
+            println "SO大小: ${String.format('%.2f', soSize / 1024.0 / 1024.0)} MB"
+        }
+    }
+}
+
+// 清理混淆文件
+task cleanObfuscation(type: Delete, group: 'obfuscation', description: '清理混淆生成的文件') {
+    delete "${buildDir}/test_obfuscated"
+    delete "${buildDir}/obfuscated_sources"
+    
+    doLast {
+        println "混淆文件已清理"
+    }
+}

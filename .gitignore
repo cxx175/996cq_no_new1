@@ -1,0 +1,11 @@
+# 排除所有以点开头的文件夹
+.*/
+# 保留.git文件夹（如果需要的话）
+!.git/
+# 保留其他重要的点文件（如果需要的话）
+# !.gitignore
+# !.gitattributes
+
+# 排除app/build文件夹
+app/build/
+build/

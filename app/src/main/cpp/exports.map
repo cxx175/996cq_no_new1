@@ -1,0 +1,11 @@
+
+{
+    global:
+        # JNI导出函数
+        Java_*;
+        JNI_OnLoad;
+        
+    local:
+        # 隐藏所有其他符号
+        *;
+};
