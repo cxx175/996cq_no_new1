@@ -1,4 +1,4 @@
-package load.tencent.lib;
+package gd.game.lib;
 
 /**
  * 统一管理应用中所有加密字符串的类

@@ -1,4 +1,4 @@
-package load.tencent.lib;
+package gd.game.lib;
 
 import android.content.Context;
 import android.graphics.PixelFormat;

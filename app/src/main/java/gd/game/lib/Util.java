@@ -1,5 +1,5 @@
 // DeviceInfoUtils.java - 设备信息相关工具
-package load.tencent.lib;
+package gd.game.lib;
 
 import android.app.Activity;
 import android.content.Context;

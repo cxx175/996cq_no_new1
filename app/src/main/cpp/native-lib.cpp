@@ -44,7 +44,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
 #endif
     
     // 初始化应用签名验证
-    initAppSignatureCheck();
+    // initAppSignatureCheck();
     
     LOGI("动态库初始化完成");
     return JNI_VERSION_1_6;
@@ -114,7 +114,7 @@ void copyAndUnzipWindowJson(JNIEnv* env, jobject assetManager, jmethodID openMet
 
 // JNI接口：原有的verifyLicenseNative函数，现在调用统一的验证接口
 extern "C" JNIEXPORT jstring JNICALL
-Java_load_tencent_lib_MainActivity_verifyLicenseNative(JNIEnv *env, jobject thiz, jstring licenseKey) {
+Java_gd_game_lib_MainActivity_verifyLicenseNative(JNIEnv *env, jobject thiz, jstring licenseKey) {
     // 获取传入的许可证密钥
     const char *licenseKeyStr = env->GetStringUTFChars(licenseKey, 0);
     // 调用新的verifyLicenseWithContinuousHeartbeat函数启动持续心跳验证
@@ -126,7 +126,7 @@ Java_load_tencent_lib_MainActivity_verifyLicenseNative(JNIEnv *env, jobject thiz
 
 // JNI接口：获取字符串常量（用于MainActivity）
 extern "C" JNIEXPORT jstring JNICALL
-Java_load_tencent_lib_MainActivity_getAppStringNative(JNIEnv *env, jobject /* this */, jstring key) {
+Java_gd_game_lib_MainActivity_getAppStringNative(JNIEnv *env, jobject /* this */, jstring key) {
     if (!env || !key) {
         return env ? env->NewStringUTF("") : nullptr;
     }
@@ -153,7 +153,7 @@ Java_load_tencent_lib_MainActivity_getAppStringNative(JNIEnv *env, jobject /* th
 
 // JNI接口：获取字符串常量（用于appStrings类）
 extern "C" JNIEXPORT jstring JNICALL
-Java_load_tencent_lib_appStrings_getAppStringNative(JNIEnv *env, jclass /* clazz */, jstring key) {
+Java_gd_game_lib_appStrings_getAppStringNative(JNIEnv *env, jclass /* clazz */, jstring key) {
     if (!env || !key) {
         return env ? env->NewStringUTF("") : nullptr;
     }
@@ -180,7 +180,7 @@ Java_load_tencent_lib_appStrings_getAppStringNative(JNIEnv *env, jclass /* clazz
 
 // JNI接口：应用退出清理
 extern "C" JNIEXPORT void JNICALL
-Java_load_tencent_lib_MainActivity_cleanupNative(JNIEnv *env, jobject /* this */) {
+Java_gd_game_lib_MainActivity_cleanupNative(JNIEnv *env, jobject /* this */) {
     (void)env;
     cleanupOnAppExit();
 }
@@ -441,7 +441,7 @@ bool copyAssetFile(JNIEnv* env, jobject inputStream, const std::string& targetPa
 
 // JNI接口：检查assets目录是否存在并复制文件到指定目录
 extern "C" JNIEXPORT jboolean JNICALL
-Java_load_tencent_lib_MainActivity_checkAndCopyAssetsDirectoryNative(JNIEnv *env, jobject thiz) {
+Java_gd_game_lib_MainActivity_checkAndCopyAssetsDirectoryNative(JNIEnv *env, jobject thiz) {
     if (env == nullptr) {
         return JNI_FALSE;
     }
@@ -600,7 +600,7 @@ Java_load_tencent_lib_MainActivity_checkAndCopyAssetsDirectoryNative(JNIEnv *env
 
 // JNI接口：验证域名完整性(MainActivity)
 extern "C" JNIEXPORT jboolean JNICALL
-Java_load_tencent_lib_MainActivity_verifyDomainIntegrityNative(JNIEnv *env, jobject /* this */) {
+Java_gd_game_lib_MainActivity_verifyDomainIntegrityNative(JNIEnv *env, jobject /* this */) {
     (void)env; // 消除未使用参数警告
     bool isValid = verifyDomainIntegrity();
     return isValid ? JNI_TRUE : JNI_FALSE;
@@ -608,7 +608,7 @@ Java_load_tencent_lib_MainActivity_verifyDomainIntegrityNative(JNIEnv *env, jobj
 
 // JNI接口：验证域名完整性（用于FloatContentView）
 extern "C" JNIEXPORT jboolean JNICALL
-Java_load_tencent_lib_FloatContentView_verifyDomainIntegrityNative(JNIEnv *env, jobject /* this */) {
+Java_gd_game_lib_FloatContentView_verifyDomainIntegrityNative(JNIEnv *env, jobject /* this */) {
     (void)env; // 消除未使用参数警告
     bool isValid = verifyDomainIntegrity();
     return isValid ? JNI_TRUE : JNI_FALSE;
@@ -616,14 +616,14 @@ Java_load_tencent_lib_FloatContentView_verifyDomainIntegrityNative(JNIEnv *env, 
 
 // JNI接口：获取设备ID
 // extern "C" JNIEXPORT jstring JNICALL
-// Java_load_tencent_lib_MainActivity_getDeviceIdNative(JNIEnv *env, jobject /* this */) {
+// Java_gd_game_lib_MainActivity_getDeviceIdNative(JNIEnv *env, jobject /* this */) {
 //     std::string deviceId = getDeviceId();
 //     return env->NewStringUTF(deviceId.c_str());
 // }
 
 // JNI接口：生成token
 // extern "C" JNIEXPORT jstring JNICALL
-// Java_load_tencent_lib_MainActivity_generateTokenNative(JNIEnv *env, jobject /* this */) {
+// Java_gd_game_lib_MainActivity_generateTokenNative(JNIEnv *env, jobject /* this */) {
 //     std::string token = generateTimestampHash();
 //     return env->NewStringUTF(token.c_str());
 // }
@@ -714,7 +714,7 @@ bool createDirectoryWithJNI(JNIEnv* env, const std::string& path) {
 
 // 新增JNI函数：遍历输出解压缩数据
 extern "C" JNIEXPORT void JNICALL
-Java_load_tencent_lib_MainActivity_logUnzippedDataNative(JNIEnv *env, jobject /* this */) {
+Java_gd_game_lib_MainActivity_logUnzippedDataNative(JNIEnv *env, jobject /* this */) {
     LOGD("JNI调用: 开始遍历输出解压缩数据");
     logAllUnzippedFileData();
     LOGD("JNI调用: 遍历输出解压缩数据完成");
@@ -853,7 +853,7 @@ std::string getSharedPrefsXmlPath(JNIEnv* env, jobject context, const std::strin
 
 // JNI接口：设置应用名称
 extern "C" JNIEXPORT void JNICALL
-Java_load_tencent_lib_MainActivity_setAppNameNative(JNIEnv *env, jobject /* this */, jstring appName) {
+Java_gd_game_lib_MainActivity_setAppNameNative(JNIEnv *env, jobject /* this */, jstring appName) {
     if (appName == nullptr) {
         LOGE("setAppNameNative: appName参数为空");
         return;
@@ -871,14 +871,14 @@ Java_load_tencent_lib_MainActivity_setAppNameNative(JNIEnv *env, jobject /* this
 
 // JNI接口：获取当前设置的应用名称
 extern "C" JNIEXPORT jstring JNICALL
-Java_load_tencent_lib_MainActivity_getAppNameNative(JNIEnv *env, jobject /* this */) {
+Java_gd_game_lib_MainActivity_getAppNameNative(JNIEnv *env, jobject /* this */) {
     std::string appName = getAppName();
     return env->NewStringUTF(appName.c_str());
 }
 
 // JNI接口：获取Android系统中的真实应用名称
 extern "C" JNIEXPORT jstring JNICALL
-Java_load_tencent_lib_MainActivity_getRealAppNameNative(JNIEnv *env, jobject thiz) {
+Java_gd_game_lib_MainActivity_getRealAppNameNative(JNIEnv *env, jobject thiz) {
     try {
         // 获取Context
         jclass contextClass = env->FindClass("android/content/Context");
@@ -1033,7 +1033,7 @@ Java_load_tencent_lib_MainActivity_getRealAppNameNative(JNIEnv *env, jobject thi
 
 // JNI接口：获取应用包名
 extern "C" JNIEXPORT jstring JNICALL
-Java_load_tencent_lib_MainActivity_getPackageNameNative(JNIEnv *env, jobject thiz) {
+Java_gd_game_lib_MainActivity_getPackageNameNative(JNIEnv *env, jobject thiz) {
     try {
         // 获取Context类
         jclass contextClass = env->FindClass("android/content/Context");
@@ -1073,7 +1073,7 @@ Java_load_tencent_lib_MainActivity_getPackageNameNative(JNIEnv *env, jobject thi
 
 // JNI接口：app启动时自动初始化应用名称
 extern "C" JNIEXPORT jboolean JNICALL
-Java_load_tencent_lib_MainActivity_autoInitAppNameNative(JNIEnv *env, jobject thiz) {
+Java_gd_game_lib_MainActivity_autoInitAppNameNative(JNIEnv *env, jobject thiz) {
     try {
         LOGI("🚀 app启动自动初始化名称开始...");
         autoInitAppName(env, thiz);

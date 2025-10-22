@@ -1,4 +1,4 @@
-package load.tencent.lib;
+package gd.game.lib;
 
 import android.app.Activity;
 import android.content.ComponentName;
