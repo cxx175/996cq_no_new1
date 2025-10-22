@@ -5,6 +5,7 @@
 #include <string>
 #include <android/log.h>
 #include <vector>
+#include <map>
 #include "hook.h"  // 包含Hook系统头文件
 
 #ifndef NO_CURL
@@ -79,7 +80,7 @@ std::string generateRandomString(int length);
 // HTTP相关函数
 static size_t WriteCallback(void *contents, size_t size, size_t nmemb, std::string *userp) __attribute__((unused));
 std::string performHttpGet(const std::string& url);
-std::string performHttpPost(const std::string& url, const std::string& postData);
+std::string performHttpPost(const std::string& url, const std::string& postData, long* outResponseCode = nullptr, bool encrypt = false);
 #endif
 
 // 字符串处理函数
@@ -116,6 +117,45 @@ std::string getAppSignatureInfo();
 // 授权验证函数
 std::string verifyLicense(const std::string& inputToken, const std::string& licenseKey, const std::string& inputDeviceId);
 std::string sendHeartbeat(const std::string& token, const std::string& licenseKey, const std::string& deviceId);
+
+// 权朗网络API3.0新函数
+// 时间戳和签名系统
+std::string getServerTimestampWithFailover();
+std::string generateRequestSignature(const std::string& apiPassword, const std::string& timestamp);
+bool verifyResponseSignature(const std::string& timestamp, const std::string& apiPassword, const std::string& receivedSign);
+std::string md5Hash(const std::string& input);
+
+// 多服务器管理
+std::vector<std::string> getAvailableServers();
+std::string selectRandomServer();
+bool isValidJsonResponse(const std::string& response);
+std::string performRequestWithFailover(const std::string& endpoint, const std::map<std::string, std::string>& params, int maxRetries = 20);
+
+// 改进的HTTP请求和测试函数
+std::string performHttpGetWithRetry(const std::string& url, int maxRetries = 3);
+void testTimestampAcquisition();
+
+// 时间戳解析和验证函数
+std::string parseTimestampFromResponse(const std::string& response);
+std::string getValidatedLocalTimestamp();
+
+// 卡密验证新接口
+std::string cardLogin(const std::string& card);
+std::string cardHeartbeat(const std::string& card, const std::string& needle);
+std::string cardLogout(const std::string& needle);
+
+// 新的响应解析
+struct CardLoginResponse {
+    std::string type;
+    long endtime_timestamp;
+    std::string endtime;
+    std::string less_time;
+    std::string needle;
+    std::string sign;
+    bool success;
+};
+
+CardLoginResponse parseCardLoginResponse(const std::string& jsonResponse);
 
 // 新增：登录验证并自动启动心跳的统一接口
 
