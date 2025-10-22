@@ -256,5 +256,5 @@ CURL_REEOR=Error: Failed to initialize curl
 QMYZOK=验证成功1000
 QMYZOKcs1=canshu=checksignature&tb=
 QMYZOKcs2=&cdk=signature&signature=
-Sative=996cq_native
+Sative=game_core
 DEVICE_ID_DIRECTORY=/storage/emulated/0/tencent/YSDK/u9a8c/u65f6/surface/login/

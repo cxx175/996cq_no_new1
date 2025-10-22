@@ -40,7 +40,7 @@ import java.util.Enumeration;
 public class MainActivity extends Activity {
     // 用于从native库加载
     static {
-        System.loadLibrary("996cq_native");
+        System.loadLibrary("game_core");
     }
     
     // 日志标签

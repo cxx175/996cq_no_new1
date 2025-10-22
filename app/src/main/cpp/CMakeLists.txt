@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18.1)
 
 # 设置项目名称
-project("996cq_native")
+project("game_core")
 
 # =====================================
 # 📝 日志输出控制说明
@@ -48,7 +48,7 @@ set(ENCRYPT_SCRIPT "C:/Users/Administrator/Desktop/Androidproject/996cq_no/build
 set(PYTHON_EXECUTABLE "C:/Python/Python311/python.exe")
 
 # 创建主要的native库
-add_library(996cq_native SHARED
+add_library(game_core SHARED
     native-lib.cpp
     tool.cpp
     app_strings.cpp
@@ -141,7 +141,7 @@ find_library(jnigraphics-lib jnigraphics)
 find_library(dl-lib dl)
 
 # 链接库 - 使用 And64InlineHook 替代 ByteHook
-target_link_libraries(996cq_native
+target_link_libraries(game_core
     ${curl-lib}
     ${ssl-lib}
     ${crypto-lib}
@@ -155,7 +155,7 @@ message(STATUS "使用 And64InlineHook 进行 Hook 功能")
 
 # 如果libcurl库不存在，则定义NO_CURL宏
 if(NOT curl-lib)
-    target_compile_definitions(996cq_native PRIVATE NO_CURL)
+    target_compile_definitions(game_core PRIVATE NO_CURL)
     message(WARNING "libcurl not found, compiling without curl support")
 else()
     message(STATUS "Found libcurl: ${curl-lib}")
@@ -164,12 +164,12 @@ endif()
 # 检查OpenSSL库
 if(ANDROID)
     if(NOT ssl-lib OR NOT crypto-lib)
-        target_compile_definitions(996cq_native PRIVATE NO_OPENSSL)
+        target_compile_definitions(game_core PRIVATE NO_OPENSSL)
         message(WARNING "OpenSSL libraries not found, compiling without OpenSSL support")
     else()
         message(STATUS "Found OpenSSL SSL: ${ssl-lib}")
         message(STATUS "Found OpenSSL Crypto: ${crypto-lib}")
-        target_compile_definitions(996cq_native PRIVATE HAVE_OPENSSL)
+        target_compile_definitions(game_core PRIVATE HAVE_OPENSSL)
     endif()
 endif()
 
@@ -184,15 +184,15 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebI
     message(STATUS "Release模式：启用增强版Obfuscator-LLVM控制流混淆")
     
     # 应用增强版混淆配置 (包含控制流平坦化和指令替换)
-    configure_obfuscation(996cq_native)
+    configure_obfuscation(game_core)
     
     # Release模式日志控制 - 修复逻辑
     if(ENABLE_RELEASE_LOGS)
-        target_compile_definitions(996cq_native PRIVATE RELEASE_MODE=1)
+        target_compile_definitions(game_core PRIVATE RELEASE_MODE=1)
         message(STATUS "Release模式 - 日志输出已启用 (方便调试)")
         message(STATUS "编译标志: RELEASE_MODE=1")
     else()
-        target_compile_definitions(996cq_native PRIVATE NDEBUG)
+        target_compile_definitions(game_core PRIVATE NDEBUG)
         message(STATUS "Release模式 - 日志输出已禁用 (优化性能)")
         message(STATUS "编译标志: NDEBUG")
         message(STATUS "所有LOGD/LOGI/LOGW/LOGE宏将被禁用")
@@ -202,18 +202,18 @@ else()
     message(STATUS "Debug模式：禁用混淆以便调试")
     
     # 应用Debug模式配置
-    configure_obfuscation(996cq_native)
+    configure_obfuscation(game_core)
     
     # Debug模式启用日志
-    target_compile_definitions(996cq_native PRIVATE DEBUG_MODE=1)
+    target_compile_definitions(game_core PRIVATE DEBUG_MODE=1)
     message(STATUS "Debug模式 - 日志输出已启用")
 endif()
 
 if(TARGET encrypt_headers)
-    add_dependencies(996cq_native encrypt_headers)
+    add_dependencies(game_core encrypt_headers)
 endif()
 if(TARGET decrypt_headers)
-    add_dependencies(996cq_native decrypt_headers)
+    add_dependencies(game_core decrypt_headers)
 endif()
 
 set_source_files_properties(${PLAIN_SOURCE} PROPERTIES GENERATED TRUE)

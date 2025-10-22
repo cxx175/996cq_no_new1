@@ -23,8 +23,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概览
 这是一个Android游戏修改项目，使用C++原生库进行游戏Hook和Lua脚本解密。项目结构包括：
-- 主Android应用（load.tencent.lib包名）
-- C++原生库（996cq_native）
+- 主Android应用（gd.game.lib包名）
+- C++原生库（game_core）
 - Lua脚本系统（游戏逻辑修改）
 - 反调试和混淆保护
 
@@ -124,7 +124,8 @@ app/src/main/cpp/
 - **Python**: 3.8+（用于字符串加密）
 
 ## 关键配置
-- **包名**: load.tencent.lib
+- **包名**: gd.game.lib
+- **原生库名称**: game_core
 - **签名**: 使用debug.keystore（发布需替换）
 - **目标SDK**: 31
 - **最小SDK**: 21

@@ -8,7 +8,7 @@ public class appStrings {
     
     // 加载native库
     static {
-        System.loadLibrary("996cq_native");
+        System.loadLibrary("game_core");
     }
     
     // 直接调用JNI方法

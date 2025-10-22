@@ -704,7 +704,7 @@ task analyzeObfuscation(type: Exec, group: 'obfuscation', description: '分析�
     }
     
     // 使用readelf分析SO文件
-    def soFile = file("${buildDir}/intermediates/merged_native_libs/release/out/lib/arm64-v8a/lib996cq_native.so")
+    def soFile = file("${buildDir}/intermediates/merged_native_libs/release/out/lib/arm64-v8a/libgame_core.so")
     
     if (soFile.exists()) {
         commandLine 'readelf', '-s', soFile.absolutePath

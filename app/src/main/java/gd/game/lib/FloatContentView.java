@@ -642,15 +642,15 @@ public class FloatContentView extends PopupWindow {
 //        --------------------------------------------------------------------------------------------------
         // addSwitch(appStrings.SETTING_FORCE_BSYY, 14, 0xFFFFFFFF, typefaceXS);      // 冰霜群雨 
         // addSwitch(appStrings.SETTING_FORCE_SWZY, 14, 0xFFFFFFFF, typefaceXS);      // 死亡之眼
-        // addSwitch(appStrings.SBYS_AND_YM, 14, 0xFFFFFFFF, typefaceXS);      // 十步一杀+野蛮
+        addSwitch(appStrings.SBYS_AND_YM, 14, 0xFFFFFFFF, typefaceXS);      // 十步一杀+野蛮
         // addSwitch(appStrings.JFPBTNUI, 14, 0xFFFFFFFF, typefaceXS);      // 飓风破
-        // addSwitch(appStrings.SETTING_QUICK_SKILL, 14, 0xFFFFFFFF, typefaceXS);     // 快速使用高级技能
+        addSwitch(appStrings.SETTING_QUICK_SKILL, 14, 0xFFFFFFFF, typefaceXS);     // 快速使用高级技能
         // addSwitch(appStrings.SETTING_FORCE_ASSASSINATION, 14, 0xFFFFFFFF, typefaceXS);     // 强制移动刺杀
         // addSwitch(appStrings.DoubleFire, 14, 0xFFFFFFFF, typefaceXS);     // 双烈火 
         // addSwitch(appStrings.SETTING_CHUDAO_JGDY, 14, 0xFFFFFFFF, typefaceXS);     // 疾光电影 
         // addSwitch(appStrings.DDLH, 14, 0xFFFFFFFF, typefaceXS);     // 刀刀烈火
-        // addSwitch(appStrings.quickBOOK, 14, 0xFFFFFFFF, typefaceXS);     // 快速切换武穆遗书按钮
-        // addSwitch(appStrings.exit_buff, 14, 0xFFFFFFFF, typefaceXS);     // 变羊玄武
+        addSwitch(appStrings.quickBOOK, 14, 0xFFFFFFFF, typefaceXS);     // 快速切换武穆遗书按钮
+        addSwitch(appStrings.exit_buff, 14, 0xFFFFFFFF, typefaceXS);     // 变羊玄武
         // 为所有开关设置状态改变监听器
         for (int i = 0; i < switchs.size(); i++) {
             final int index = i;
