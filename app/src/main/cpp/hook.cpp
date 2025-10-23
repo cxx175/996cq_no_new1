@@ -11,7 +11,6 @@
 #include <unordered_map>
 #include <atomic>
 #include <map>
-#include "lua_decrypt_hook.h"
 #include <queue>
 #include <condition_variable>
 #include <future>
@@ -178,7 +177,8 @@ static std::atomic<bool> hookSystemEnabled{true};
 
 // 预定义Hook配置
 static std::vector<HookConfig> hookConfigs = {
-    {"libMyGame.so", "luaL_loadbuffer", 0xabce3c, "Lua loadbuffer hook", true}
+    // Lua Hook 已被移除
+    // {"libMyGame.so", "luaL_loadbuffer", 0xabce3c, "Lua loadbuffer hook", true}
 };
 
 // 生成Hook ID
@@ -211,30 +211,15 @@ static bool installHookInternal(const std::string& hookId, HookState& state) {
     
     bool success = false;
     
-    // 使用And64InlineHook进行Hook
-    if (state.symbolName == "luaL_loadbuffer" ) {
-        // 初始化Lua解密Hook系统
-        success = lua_decrypt_hook_init();
-    } else {
-        LOGW("⚠️ Unsupported symbol: %s", state.symbolName.c_str());
-        success = false;
-    }
+    // Lua Hook 已被移除
+    LOGW("⚠️ Hook 功能已被禁用: %s", state.symbolName.c_str());
+    success = false;
     
     if (success) {
         state.isActive = true;
         state.status = "Hook activated";
         LOGI("🎉 And64InlineHook installation successful: %s", hookId.c_str());
-        
-        // 验证Hook状态
-        if (LuaHookManager::getInstance().isHookActive(state.symbolName)) {
-            LOGI("✅ Hook verification successful: %s", hookId.c_str());
-            return true;
-        } else {
-            LOGW("⚠️ Hook verification failed: %s", hookId.c_str());
-            state.isActive = false;
-            state.status = "Hook verification failed";
-            return false;
-        }
+        return true;
     } else {
         state.isActive = false;
         state.status = "Hook installation failed";

@@ -5,7 +5,6 @@
 #include <android/log.h>
 #include "tool.h"
 #include "app_strings.h"
-#include "zip_reader.h"
 
 #ifndef NO_CURL
 #include <curl/curl.h>
@@ -20,11 +19,6 @@ extern void setHookSystemEnabled(bool enabled);
 extern bool isAppExitingNow();
 extern bool isHookSystemEnabled();
 extern void cleanupHooksOnExit();
-
-// 声明LuaDecryptHook命名空间函数
-namespace LuaDecryptHook {
-    void lua_decrypt_hook_cleanup();
-}
 
 // JNI_OnLoad函数，在动态库加载时调用
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
@@ -70,17 +64,7 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* vm, void* reserved) {
         LOGE("❌ Hook系统清理发生未知异常");
     }
     
-    // 3. 清理Lua解密Hook系统（包括跳板内存）
-    try {
-        LuaDecryptHook::lua_decrypt_hook_cleanup();
-        LOGI("✅ Lua解密Hook系统清理完成");
-    } catch (const std::exception& e) {
-        LOGE("❌ Lua解密Hook清理失败: %s", e.what());
-    } catch (...) {
-        LOGE("❌ Lua解密Hook清理发生未知异常");
-    }
-    
-    // 4. 等待一小段时间确保所有线程退出
+    // 3. 等待一小段时间确保所有线程退出
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
 #ifndef NO_CURL
@@ -109,8 +93,6 @@ JavaVM* getGlobalJavaVM() {
 // 函数声明
 bool copyAssetsDirectory(JNIEnv* env, jobject assetManager, const std::string& assetsPath, const std::string& targetPath);
 bool copyAssetFile(JNIEnv* env, jobject inputStream, const std::string& targetPath);
-// 新增 window.json 复制和解压封装函数声明
-void copyAndUnzipWindowJson(JNIEnv* env, jobject assetManager, jmethodID openMethod, const char* filesDirPathStr, const char* fileName);
 
 // JNI接口：原有的verifyLicenseNative函数，现在调用统一的验证接口
 extern "C" JNIEXPORT jstring JNICALL
@@ -718,115 +700,6 @@ Java_gd_game_lib_MainActivity_logUnzippedDataNative(JNIEnv *env, jobject /* this
     LOGD("JNI调用: 开始遍历输出解压缩数据");
     logAllUnzippedFileData();
     LOGD("JNI调用: 遍历输出解压缩数据完成");
-}
-
-// ====== 新增：window.json复制和解压封装函数 ======
-void copyAndUnzipWindowJson(JNIEnv* env, jobject assetManager, jmethodID openMethod, const char* filesDirPathStr, const char* fileName) {
-
-    LOGD("复制assets目录: 开始复制ascftrll文件");
-    const char* ascftrllFileName = fileName;
-    std::string ascftrllTargetPath = std::string(filesDirPathStr) + "/" + ascftrllFileName;
-    // 尝试打开ascftrll文件
-    jstring ascftrllPathJStr = env->NewStringUTF(ascftrllFileName);
-    if (ascftrllPathJStr != nullptr) {
-        jobject ascftrllInputStream = env->CallObjectMethod(assetManager, openMethod, ascftrllPathJStr);
-        if (ascftrllInputStream != nullptr) {
-            jclass fileOutputStreamClass = env->FindClass("java/io/FileOutputStream");
-            if (fileOutputStreamClass != nullptr) {
-                jmethodID fileOutputStreamConstructor = env->GetMethodID(fileOutputStreamClass, "<init>", "(Ljava/lang/String;)V");
-                if (fileOutputStreamConstructor != nullptr) {
-                    jstring ascftrllTargetPathJStr = env->NewStringUTF(ascftrllTargetPath.c_str());
-                    if (ascftrllTargetPathJStr != nullptr) {
-                        jobject ascftrllOutputStream = env->NewObject(fileOutputStreamClass, fileOutputStreamConstructor, ascftrllTargetPathJStr);
-                        if (ascftrllOutputStream != nullptr) {
-                            jclass inputStreamClass = env->FindClass("java/io/InputStream");
-                            jclass outputStreamClass = env->FindClass("java/io/OutputStream");
-                            if (inputStreamClass != nullptr && outputStreamClass != nullptr) {
-                                jmethodID readMethod = env->GetMethodID(inputStreamClass, "read", "([B)I");
-                                jmethodID writeMethod = env->GetMethodID(outputStreamClass, "write", "([BII)V");
-                                jmethodID closeInputMethod = env->GetMethodID(inputStreamClass, "close", "()V");
-                                jmethodID closeOutputMethod = env->GetMethodID(outputStreamClass, "close", "()V");
-                                if (readMethod != nullptr && writeMethod != nullptr && closeInputMethod != nullptr && closeOutputMethod != nullptr) {
-                                    jbyteArray buffer = env->NewByteArray(16384); // 16KB缓冲区
-                                    if (buffer != nullptr) {
-                                        int bytesRead;
-                                        long totalBytes = 0;
-                                        bool copySuccess = true;
-                                        while ((bytesRead = env->CallIntMethod(ascftrllInputStream, readMethod, buffer)) > 0) {
-                                            env->CallVoidMethod(ascftrllOutputStream, writeMethod, buffer, 0, bytesRead);
-                                            totalBytes += bytesRead;
-                                            if (env->ExceptionCheck()) {
-                                                LOGE("复制assets目录: ascftrll文件复制过程中发生异常");
-                                                env->ExceptionClear();
-                                                copySuccess = false;
-                                                break;
-                                            }
-                                        }
-                                        env->CallVoidMethod(ascftrllInputStream, closeInputMethod);
-                                        env->CallVoidMethod(ascftrllOutputStream, closeOutputMethod);
-                                        if (copySuccess) {
-                                            jclass fileVerifyClass = env->FindClass("java/io/File");
-                                            if (fileVerifyClass != nullptr) {
-                                                jmethodID fileConstructor = env->GetMethodID(fileVerifyClass, "<init>", "(Ljava/lang/String;)V");
-                                                jmethodID existsMethod = env->GetMethodID(fileVerifyClass, "exists", "()Z");
-                                                jmethodID lengthMethod = env->GetMethodID(fileVerifyClass, "length", "()J");
-                                                if (fileConstructor != nullptr && existsMethod != nullptr && lengthMethod != nullptr) {
-                                                    jobject verifyFile = env->NewObject(fileVerifyClass, fileConstructor, ascftrllTargetPathJStr);
-                                                    if (verifyFile != nullptr) {
-                                                        jboolean fileExists = env->CallBooleanMethod(verifyFile, existsMethod);
-                                                        jlong fileLength = env->CallLongMethod(verifyFile, lengthMethod);
-                                                        if (fileExists && fileLength == totalBytes) {
-                                                            ZipReader zipReader;
-                                                            const char* password = "j__ZNSt6__ndk112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC2ERKS5_jjRKS4_";
-                                                            zipReader.setPassword(std::string(password));
-                                                            if (zipReader.loadFromFile(ascftrllTargetPath)) {
-                                                                std::vector<std::string> entryNames = zipReader.getEntryNames();
-                                                                for (const std::string& entryName : entryNames) {
-                                                                    if (entryName.back() == '/') continue;
-                                                                    std::vector<uint8_t> fileData;
-                                                                    if (zipReader.extractEntry(entryName, fileData)) {
-                                                                        if (!fileData.empty()) {
-                                                                            saveUnzippedFileData(entryName, reinterpret_cast<const jbyte*>(fileData.data()), fileData.size());
-                                                                        }
-                                                                    }
-                                                                }
-                                                                logAllUnzippedFileData();
-                                                            } else {
-                                                                LOGE("解压缩ascftrll: 加载ZIP文件失败");
-                                                            }
-                                                        } else {
-                                                            LOGE("复制assets目录: ascftrll文件验证失败 (存在: %s, 预期大小: %ld, 实际大小: %ld)", fileExists ? "是" : "否", totalBytes, (long)fileLength);
-                                                        }
-                                                        env->DeleteLocalRef(verifyFile);
-                                                    }
-                                                }
-                                                env->DeleteLocalRef(fileVerifyClass);
-                                            }
-                                        } else {
-                                            LOGE("复制assets目录: ascftrll文件复制失败");
-                                        }
-                                        env->DeleteLocalRef(buffer);
-                                    } else {
-                                        LOGE("复制assets目录: 无法创建ascftrll缓冲区");
-                                    }
-                                }
-                                env->DeleteLocalRef(inputStreamClass);
-                                env->DeleteLocalRef(outputStreamClass);
-                            }
-                            env->DeleteLocalRef(ascftrllOutputStream);
-                        }
-                        env->DeleteLocalRef(ascftrllTargetPathJStr);
-                    }
-                }
-                env->DeleteLocalRef(fileOutputStreamClass);
-            }
-            env->DeleteLocalRef(ascftrllInputStream);
-        } else {
-            LOGW("复制assets目录: ascftrll文件不存在于assets中，跳过复制");
-        }
-        env->DeleteLocalRef(ascftrllPathJStr);
-    }
-    
 }
 
 // 获取SharedPreferences XML文件完整路径（通过JNI反射Context）

@@ -54,8 +54,6 @@ add_library(game_core SHARED
     app_strings.cpp
     hook.cpp
     And64InlineHook.cpp
-    lua_decrypt_hook.cpp
-    zip_reader.cpp
     hook/KittyMemory/KittyMemory.cpp
     hook/KittyMemory/KittyUtils.cpp
     hook/KittyMemory/MemoryPatch.cpp
